@@ -6,25 +6,14 @@ local Workspace = game:GetService("Workspace")
 local Config = {
     Player = Players.LocalPlayer,
     BombName = "Bomb",
-    BaseplateSize = Vector3.new(5, 1, 5),
-    BaseplatePosition = CFrame.new(4.25679731, 27.192234, 0.0179801397),
-    BaseplateColor = BrickColor.new("Bright blue"),
     ESPLineThickness = 2,
     ESPTextSize = 20,
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
-    PassDelay = 1, -- Delay in seconds before teleporting back after passing the bomb
-    TeleportAfterPass = false -- Default setting for teleporting after passing the bomb
+    PassDelay = 0.1,
+    TeleportAfterPass = false 
 }
 
 -- Utility Functions
-local function createPart(properties)
-    local part = Instance.new("Part")
-    for k, v in pairs(properties) do
-        part[k] = v
-    end
-    return part
-end
-
 local function isHoldingBomb(player)
     return player.Character and player.Character:FindFirstChild(Config.BombName) ~= nil
 end
@@ -40,15 +29,6 @@ local function getRandomPlayer()
     return #filteredPlayers > 0 and filteredPlayers[math.random(1, #filteredPlayers)] or nil
 end
 
--- Baseplate Creation
-local Baseplate = createPart({
-    Size = Config.BaseplateSize,
-    CFrame = Config.BaseplatePosition,
-    Anchored = true,
-    BrickColor = Config.BaseplateColor,
-    Parent = Workspace
-})
-
 -- Teleportation Functions
 local function teleportTo(destination)
     local character = Config.Player.Character
@@ -62,10 +42,6 @@ local function teleportToRandomPlayer()
     if randomPlayer and randomPlayer.Character then
         teleportTo(randomPlayer.Character:GetPivot() * CFrame.new(0, 3, 0))
     end
-end
-
-local function teleportToBaseplate()
-    teleportTo(Baseplate.CFrame * CFrame.new(0, 3, 0))
 end
 
 local function returnToOriginalPosition()
@@ -86,12 +62,10 @@ function AutoWin:Toggle(value)
         self.Connection = RunService.Heartbeat:Connect(function()
             if isHoldingBomb(Config.Player) then
                 teleportToRandomPlayer()
+                task.wait(Config.PassDelay)
                 if not Config.TeleportAfterPass then
-                    task.wait(Config.PassDelay)
                     returnToOriginalPosition()
                 end
-            else
-                teleportToBaseplate()
             end
         end)
     elseif self.Connection then
@@ -190,7 +164,7 @@ Players.PlayerAdded:Connect(function(player)
 end)
 
 -- UI Creation
-local Window = OrionLib:MakeWindow({Name = "Enhanced Pass The Bomb", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionPassTheBomb"})
+local Window = OrionLib:MakeWindow({Name = "Von Pass The Bomb", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionPassTheBomb"})
 
 local MainTab = Window:MakeTab({
     Name = "Main Features",
@@ -242,11 +216,11 @@ MainTab:AddToggle({
 
 MainTab:AddSlider({
     Name = "Pass Delay",
-    Min = 0.1,
-    Max = 5,
-    Default = 1,
+    Min = 0,
+    Max = 1,
+    Default = 0.1,
     Color = Color3.fromRGB(255,255,255),
-    Increment = 0.1,
+    Increment = 0.01,
     ValueName = "seconds",
     Callback = function(Value)
         Config.PassDelay = Value
@@ -265,8 +239,8 @@ local InfoTab = Window:MakeTab({
     PremiumOnly = false
 })
 
-InfoTab:AddParagraph("Credits", "Original by Jam and Ryo, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.2: Added quick bomb pass and teleport option")
+InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
+InfoTab:AddParagraph("Update Logs", "Version 2.4: Added adjustable pass delay, optimized Auto Win")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
