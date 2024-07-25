@@ -1,4 +1,3 @@
-
 local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -12,7 +11,9 @@ local Config = {
     BaseplateColor = BrickColor.new("Bright blue"),
     ESPLineThickness = 2,
     ESPTextSize = 20,
-    DiscordLink = "https://discord.com/invite/bRMmg4q9f7"
+    DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
+    PassDelay = 1, -- Delay in seconds before teleporting back after passing the bomb
+    TeleportAfterPass = false -- Default setting for teleporting after passing the bomb
 }
 
 -- Utility Functions
@@ -67,6 +68,12 @@ local function teleportToBaseplate()
     teleportTo(Baseplate.CFrame * CFrame.new(0, 3, 0))
 end
 
+local function returnToOriginalPosition()
+    if Config.Player.Character and Config.Player.Character:FindFirstChild("HumanoidRootPart") then
+        Config.Player.Character.HumanoidRootPart.CFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position)
+    end
+end
+
 -- Auto Win Functionality
 local AutoWin = {
     Enabled = false,
@@ -79,6 +86,10 @@ function AutoWin:Toggle(value)
         self.Connection = RunService.Heartbeat:Connect(function()
             if isHoldingBomb(Config.Player) then
                 teleportToRandomPlayer()
+                if not Config.TeleportAfterPass then
+                    task.wait(Config.PassDelay)
+                    returnToOriginalPosition()
+                end
             else
                 teleportToBaseplate()
             end
@@ -86,10 +97,7 @@ function AutoWin:Toggle(value)
     elseif self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
-        -- Return to original map when disabled
-        if Config.Player.Character and Config.Player.Character:FindFirstChild("HumanoidRootPart") then
-            Config.Player.Character.HumanoidRootPart.CFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position)
-        end
+        returnToOriginalPosition()
     end
 end
 
@@ -218,14 +226,47 @@ MainTab:AddToggle({
     end
 })
 
+MainTab:AddToggle({
+    Name = "Teleport After Pass",
+    Default = false,
+    Callback = function(Value)
+        Config.TeleportAfterPass = Value
+        OrionLib:MakeNotification({
+            Name = "Teleport After Pass",
+            Content = Value and "Enabled" or "Disabled",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+MainTab:AddSlider({
+    Name = "Pass Delay",
+    Min = 0.1,
+    Max = 5,
+    Default = 1,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 0.1,
+    ValueName = "seconds",
+    Callback = function(Value)
+        Config.PassDelay = Value
+        OrionLib:MakeNotification({
+            Name = "Pass Delay",
+            Content = "Set to " .. tostring(Value) .. " seconds",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end    
+})
+
 local InfoTab = Window:MakeTab({
     Name = "Information",
     Icon = "rbxassetid://4483345998",
     PremiumOnly = false
 })
 
-InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Ryo")
-InfoTab:AddParagraph("Update Logs", "Version 2.1: Fixed toggle functionality and auto win behavior.")
+InfoTab:AddParagraph("Credits", "Original by Jam and Ryo, Enhanced by Von")
+InfoTab:AddParagraph("Update Logs", "Version 2.2: Added quick bomb pass and teleport option")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
