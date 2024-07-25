@@ -1,0 +1,225 @@
+local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shlexware/Orion/main/source')))()
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
+
+local Config = {
+	Player = Players.LocalPlayer,
+	BombName = "Bomb",
+	BaseplateSize = Vector3.new(5, 1, 5),
+	BaseplatePosition = CFrame.new(4.25679731, 27.192234, 0.0179801397),
+	BaseplateColor = BrickColor.new("Bright blue"),
+	ESPLineThickness = 2,
+	ESPTextSize = 20,
+	DiscordLink = "https://discord.com/invite/bRMmg4q9f7"
+}
+
+local function createPart(properties)
+	local part = Instance.new("Part")
+	for k, v in pairs(properties) do
+		part[k] = v
+	end
+	return part
+end
+
+local function isHoldingBomb(player)
+	return player.Character and player.Character:FindFirstChild(Config.BombName) ~= nil
+end
+
+local function getRandomPlayer()
+	local players = Players:GetPlayers()
+	local filteredPlayers = {}
+	for _, p in ipairs(players) do
+		if p ~= Config.Player and not isHoldingBomb(p) then
+			table.insert(filteredPlayers, p)
+		end
+	end
+	return #filteredPlayers > 0 and filteredPlayers[math.random(1, #filteredPlayers)] or nil
+end
+
+local Baseplate = createPart({
+	Size = Config.BaseplateSize,
+	CFrame = Config.BaseplatePosition,
+	Anchored = true,
+	BrickColor = Config.BaseplateColor,
+	Parent = Workspace
+})
+
+local function teleportTo(destination)
+	local character = Config.Player.Character
+	if character and character:FindFirstChild("HumanoidRootPart") and destination then
+		character.HumanoidRootPart.CFrame = destination
+	end
+end
+
+local function teleportToRandomPlayer()
+	local randomPlayer = getRandomPlayer()
+	if randomPlayer and randomPlayer.Character then
+		teleportTo(randomPlayer.Character:GetPivot() * CFrame.new(0, 3, 0))
+	end
+end
+
+local function teleportToBaseplate()
+	teleportTo(Baseplate.CFrame * CFrame.new(0, 3, 0))
+end
+
+local AutoWin = {
+	Enabled = false,
+	Connection = nil
+}
+
+function AutoWin:Toggle()
+	self.Enabled = not self.Enabled
+	if self.Enabled then
+		self.Connection = RunService.Heartbeat:Connect(function()
+			if isHoldingBomb(Config.Player) then
+				teleportToRandomPlayer()
+			else
+				teleportToBaseplate()
+			end
+		end)
+	elseif self.Connection then
+		self.Connection:Disconnect()
+		self.Connection = nil
+	end
+	return self.Enabled
+end
+
+local ESP = {
+	Enabled = false,
+	Players = {}
+}
+
+function ESP:CreateForPlayer(player)
+	local espData = {
+		Line = Drawing.new("Line"),
+		NameTag = Drawing.new("Text"),
+		DistanceTag = Drawing.new("Text")
+	}
+
+	espData.Line.Thickness = Config.ESPLineThickness
+	espData.Line.Transparency = 1
+
+	for _, text in pairs({espData.NameTag, espData.DistanceTag}) do
+		text.Size = Config.ESPTextSize
+		text.Center = true
+		text.Outline = true
+	end
+
+	self.Players[player] = espData
+
+	RunService.RenderStepped:Connect(function()
+		self:UpdateESP(player, espData)
+	end)
+end
+
+function ESP:UpdateESP(player, espData)
+	if not self.Enabled or not player or not player.Character then
+		for _, item in pairs(espData) do
+			item.Visible = false
+		end
+		return
+	end
+
+	local rootPart = player.Character:FindFirstChild("HumanoidRootPart")
+	if not rootPart then return end
+
+	local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
+	local color = isHoldingBomb(player) and Color3.new(1, 0, 0) or Color3.new(0, 1, 0)
+
+	if onScreen then
+		espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
+		espData.Line.To = Vector2.new(screenPos.X, screenPos.Y)
+		espData.Line.Color = color
+
+		espData.NameTag.Text = player.Name
+		espData.NameTag.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
+		espData.NameTag.Color = color
+
+		local distance = (rootPart.Position - Workspace.CurrentCamera.CFrame.Position).Magnitude
+		espData.DistanceTag.Text = string.format("%.2f studs", distance)
+		espData.DistanceTag.Position = Vector2.new(screenPos.X, screenPos.Y + 20)
+		espData.DistanceTag.Color = color
+
+		for _, item in pairs(espData) do
+			item.Visible = true
+		end
+	else
+		for _, item in pairs(espData) do
+			item.Visible = false
+		end
+	end
+end
+
+function ESP:Toggle()
+	self.Enabled = not self.Enabled
+	return self.Enabled
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	ESP:CreateForPlayer(player)
+end
+
+Players.PlayerAdded:Connect(function(player)
+	ESP:CreateForPlayer(player)
+end)
+
+local Window = OrionLib:MakeWindow({Name = "Enhanced Pass The Bomb", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionPassTheBomb"})
+
+local MainTab = Window:MakeTab({
+	Name = "Main Features",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+MainTab:AddToggle({
+	Name = "Auto Win",
+	Default = false,
+	Callback = function(Value)
+		local status = AutoWin:Toggle()
+		OrionLib:MakeNotification({
+			Name = "Auto Win",
+			Content = status and "Enabled" or "Disabled",
+			Image = "rbxassetid://4483345998",
+			Time = 5
+		})
+	end
+})
+
+MainTab:AddToggle({
+	Name = "ESP",
+	Default = false,
+	Callback = function(Value)
+		local status = ESP:Toggle()
+		OrionLib:MakeNotification({
+			Name = "ESP",
+			Content = status and "Enabled" or "Disabled",
+			Image = "rbxassetid://4483345998",
+			Time = 5
+		})
+	end
+})
+
+local InfoTab = Window:MakeTab({
+	Name = "Information",
+	Icon = "rbxassetid://4483345998",
+	PremiumOnly = false
+})
+
+InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Ryo")
+InfoTab:AddParagraph("Update Logs", "Version 2.0: Improved code structure, enhanced ESP functionality, and added toggle for features.")
+
+InfoTab:AddButton({
+	Name = "Copy Discord Invite",
+	Callback = function()
+		setclipboard(Config.DiscordLink)
+		OrionLib:MakeNotification({
+			Name = "Discord Link Copied",
+			Content = "The invite link has been copied to your clipboard.",
+			Image = "rbxassetid://4483345998",
+			Time = 5
+		})
+	end
+})
+
+OrionLib:Init()
