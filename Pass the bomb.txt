@@ -206,7 +206,7 @@ local InfoTab = Window:MakeTab({
 	PremiumOnly = false
 })
 
-InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Ryo")
+InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Ryo and added some by von")
 InfoTab:AddParagraph("Update Logs", "Version 2.0: Improved code structure, enhanced ESP functionality, and added toggle for features.")
 
 InfoTab:AddButton({
