@@ -226,7 +226,7 @@ MainTab:AddSlider({
         Config.PassDelay = Value
         OrionLib:MakeNotification({
             Name = "Pass Delay",
-            Content = "Set to " .. tostring(Value) .. " seconds",
+            Content = "Set to " .. string.format("%.2f", Value) .. " seconds",
             Image = "rbxassetid://4483345998",
             Time = 5
         })
