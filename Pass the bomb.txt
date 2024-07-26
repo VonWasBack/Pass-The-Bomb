@@ -29,24 +29,40 @@ local function getRandomPlayer()
     return #filteredPlayers > 0 and filteredPlayers[math.random(1, #filteredPlayers)] or nil
 end
 
--- Teleportation Functions
+-- Improved Teleportation Functions
 local function teleportTo(destination)
     local character = Config.Player.Character
     if character and character:FindFirstChild("HumanoidRootPart") and destination then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+        end
+        
         character.HumanoidRootPart.CFrame = destination
+        
+        task.wait(0.1) -- Short delay to ensure the teleport has completed
+        
+        if humanoid then
+            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end
     end
 end
 
 local function teleportToRandomPlayer()
     local randomPlayer = getRandomPlayer()
     if randomPlayer and randomPlayer.Character then
-        teleportTo(randomPlayer.Character:GetPivot() * CFrame.new(0, 3, 0))
+        local targetRoot = randomPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if targetRoot then
+            local offset = Vector3.new(0, 3, 0) -- Adjust this offset as needed
+            local targetCFrame = targetRoot.CFrame * CFrame.new(offset)
+            teleportTo(targetCFrame)
+        end
     end
 end
 
 local function returnToOriginalPosition()
     if Config.Player.Character and Config.Player.Character:FindFirstChild("HumanoidRootPart") then
-        Config.Player.Character.HumanoidRootPart.CFrame = CFrame.new(Workspace.CurrentCamera.CFrame.Position)
+        teleportTo(CFrame.new(Workspace.CurrentCamera.CFrame.Position))
     end
 end
 
@@ -240,7 +256,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.4: Added adjustable pass delay, optimized Auto Win")
+InfoTab:AddParagraph("Update Logs", "Version 2.5: Improved Auto Win functionality, fixed teleportation issues")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
