@@ -10,13 +10,8 @@ local Config = {
     ESPTextSize = 20,
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
-    TeleportAfterPass = false 
+    TeleportAfterPass = false,
     ESPColorMode = "Normal"
-}
-
-local ESP = {
-    Enabled = false,
-    Players = {}
 }
 
 -- Utility Functions
@@ -244,7 +239,6 @@ MainTab:AddToggle({
         })
     end
 })
-
 
 MainTab:AddToggle({
     Name = "Teleport After Pass",
