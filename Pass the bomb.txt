@@ -6,13 +6,12 @@ local Workspace = game:GetService("Workspace")
 local Config = {
     Player = Players.LocalPlayer,
     BombName = "Bomb",
+    ESPColor = Color3.fromRGB(255, 0, 0),
     ESPLineThickness = 2,
     ESPTextSize = 20,
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
     TeleportAfterPass = false,
-    BombESPColor = Color3.new(1, 0, 0), -- Red color for bomb holder
-    NormalESPColor = Color3.new(0, 1, 0), -- Green color for other players
     CoinName = "Coin",
     OriginalPosition = nil
 }
@@ -139,23 +138,20 @@ function ESP:UpdateESP(player, espData)
     if not rootPart then return end
 
     local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-    
-    -- Set color based on whether the player is holding the bomb
-    local color = isHoldingBomb(player) and Config.BombESPColor or Config.NormalESPColor
 
     if onScreen then
         espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
         espData.Line.To = Vector2.new(screenPos.X, screenPos.Y)
-        espData.Line.Color = color
+        espData.Line.Color = Config.ESPColor
 
         espData.NameTag.Text = player.Name
         espData.NameTag.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
-        espData.NameTag.Color = color
+        espData.NameTag.Color = Config.ESPColor
 
         local distance = (rootPart.Position - Workspace.CurrentCamera.CFrame.Position).Magnitude
         espData.DistanceTag.Text = string.format("%.2f studs", distance)
         espData.DistanceTag.Position = Vector2.new(screenPos.X, screenPos.Y + 20)
-        espData.DistanceTag.Color = color
+        espData.DistanceTag.Color = Config.ESPColor
 
         for _, item in pairs(espData) do
             item.Visible = true
@@ -247,7 +243,26 @@ MainTab:AddToggle({
     end
 })
 
-MainTab:AddParagraph("ESP Colors", "Green: Normal players\nRed: Bomb holder")
+MainTab:AddDropdown({
+    Name = "ESP Color",
+    Default = "Red",
+    Options = {"Red", "Green", "Blue", "White"},
+    Callback = function(Value)
+        local colors = {
+            Red = Color3.fromRGB(255, 0, 0),
+            Green = Color3.fromRGB(0, 255, 0),
+            Blue = Color3.fromRGB(0, 0, 255),
+            White = Color3.fromRGB(255, 255, 255)
+        }
+        Config.ESPColor = colors[Value]
+        OrionLib:MakeNotification({
+            Name = "ESP Color",
+            Content = "Changed to " .. Value,
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end    
+})
 
 MainTab:AddToggle({
     Name = "Teleport After Pass",
@@ -303,7 +318,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.7: Implemented red ESP for bomb holder, improved ESP functionality")
+InfoTab:AddParagraph("Update Logs", "Version 2.6: Fixed red ESP issue")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
