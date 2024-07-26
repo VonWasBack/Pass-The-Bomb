@@ -6,7 +6,8 @@ local Workspace = game:GetService("Workspace")
 local Config = {
     Player = Players.LocalPlayer,
     BombName = "Bomb",
-    ESPColor = Color3.fromRGB(255, 0, 0),
+    ESPColorNoBomb = Color3.fromRGB(0, 255, 0),  -- Green for players without bomb
+    ESPColorWithBomb = Color3.fromRGB(255, 0, 0),  -- Red for player with bomb
     ESPLineThickness = 2,
     ESPTextSize = 20,
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
@@ -31,7 +32,7 @@ local function getRandomPlayer()
     return #filteredPlayers > 0 and filteredPlayers[math.random(1, #filteredPlayers)] or nil
 end
 
--- Improved Teleportation Functions
+-- Teleportation Functions
 local function teleportTo(destination)
     local character = Config.Player.Character
     if character and character:FindFirstChild("HumanoidRootPart") and destination then
@@ -42,7 +43,7 @@ local function teleportTo(destination)
         
         character.HumanoidRootPart.CFrame = destination
         
-        task.wait(0.1) -- Short delay to ensure the teleport has completed
+        task.wait(0.1)
         
         if humanoid then
             humanoid.PlatformStand = false
@@ -55,7 +56,7 @@ local function teleportToRandomPlayer()
     if randomPlayer and randomPlayer.Character then
         local targetRoot = randomPlayer.Character:FindFirstChild("HumanoidRootPart")
         if targetRoot then
-            local offset = Vector3.new(0, 0, 2) -- Teleport behind the player
+            local offset = Vector3.new(0, 0, 2)
             local targetCFrame = targetRoot.CFrame * CFrame.new(offset)
             teleportTo(targetCFrame)
         end
@@ -140,18 +141,20 @@ function ESP:UpdateESP(player, espData)
     local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
 
     if onScreen then
+        local espColor = isHoldingBomb(player) and Config.ESPColorWithBomb or Config.ESPColorNoBomb
+
         espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
         espData.Line.To = Vector2.new(screenPos.X, screenPos.Y)
-        espData.Line.Color = Config.ESPColor
+        espData.Line.Color = espColor
 
         espData.NameTag.Text = player.Name
         espData.NameTag.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
-        espData.NameTag.Color = Config.ESPColor
+        espData.NameTag.Color = espColor
 
         local distance = (rootPart.Position - Workspace.CurrentCamera.CFrame.Position).Magnitude
         espData.DistanceTag.Text = string.format("%.2f studs", distance)
         espData.DistanceTag.Position = Vector2.new(screenPos.X, screenPos.Y + 20)
-        espData.DistanceTag.Color = Config.ESPColor
+        espData.DistanceTag.Color = espColor
 
         for _, item in pairs(espData) do
             item.Visible = true
@@ -243,27 +246,6 @@ MainTab:AddToggle({
     end
 })
 
-MainTab:AddDropdown({
-    Name = "ESP Color",
-    Default = "Red",
-    Options = {"Red", "Green", "Blue", "White"},
-    Callback = function(Value)
-        local colors = {
-            Red = Color3.fromRGB(255, 0, 0),
-            Green = Color3.fromRGB(0, 255, 0),
-            Blue = Color3.fromRGB(0, 0, 255),
-            White = Color3.fromRGB(255, 255, 255)
-        }
-        Config.ESPColor = colors[Value]
-        OrionLib:MakeNotification({
-            Name = "ESP Color",
-            Content = "Changed to " .. Value,
-            Image = "rbxassetid://4483345998",
-            Time = 5
-        })
-    end    
-})
-
 MainTab:AddToggle({
     Name = "Teleport After Pass",
     Default = false,
@@ -318,7 +300,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.6: Fixed red ESP issue")
+InfoTab:AddParagraph("Update Logs", "Version 2.7: ESP now shows green for players without bomb, red for player with bomb")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
