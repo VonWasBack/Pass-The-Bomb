@@ -11,7 +11,8 @@ local Config = {
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
     TeleportAfterPass = false,
-    ESPColorMode = "Normal"
+    ESPColor = Color3.new(0, 1, 0), -- Default Green ESP
+    CoinName = "Coin"
 }
 
 -- Utility Functions
@@ -137,12 +138,7 @@ function ESP:UpdateESP(player, espData)
     if not rootPart then return end
 
     local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-    local color
-    if Config.ESPColorMode == "Normal" then
-        color = isHoldingBomb(player) and Color3.new(1, 0, 0) or Color3.new(0, 1, 0)
-    else -- "AllRed" mode
-        color = Color3.new(1, 0, 0)
-    end
+    local color = Config.ESPColor
 
     if onScreen then
         espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
@@ -189,6 +185,28 @@ Players.PlayerAdded:Connect(function(player)
     ESP:CreateForPlayer(player)
 end)
 
+-- Auto Collect Coins Functionality
+local AutoCollectCoins = {
+    Enabled = false,
+    Connection = nil
+}
+
+function AutoCollectCoins:Toggle(value)
+    self.Enabled = value
+    if self.Enabled then
+        self.Connection = RunService.Heartbeat:Connect(function()
+            for _, coin in ipairs(Workspace:GetChildren()) do
+                if coin.Name == Config.CoinName and coin:IsA("BasePart") then
+                    coin.CFrame = Config.Player.Character.HumanoidRootPart.CFrame
+                end
+            end
+        end)
+    elseif self.Connection then
+        self.Connection:Disconnect()
+        self.Connection = nil
+    end
+end
+
 -- UI Creation
 local Window = OrionLib:MakeWindow({Name = "Von Pass The Bomb", HidePremium = false, SaveConfig = true, ConfigFolder = "OrionPassTheBomb"})
 
@@ -226,14 +244,15 @@ MainTab:AddToggle({
     end
 })
 
-MainTab:AddToggle({
-    Name = "ESP Color Mode",
-    Default = false,
+MainTab:AddDropdown({
+    Name = "ESP Color",
+    Default = "Green",
+    Options = {"Green", "Red"},
     Callback = function(Value)
-        Config.ESPColorMode = Value and "AllRed" or "Normal"
+        Config.ESPColor = Value == "Green" and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
         OrionLib:MakeNotification({
-            Name = "ESP Color Mode",
-            Content = Value and "All Red" or "Normal (Red/Green)",
+            Name = "ESP Color",
+            Content = "Set to " .. Value,
             Image = "rbxassetid://4483345998",
             Time = 5
         })
@@ -271,6 +290,20 @@ MainTab:AddSlider({
             Time = 5
         })
     end    
+})
+
+MainTab:AddToggle({
+    Name = "Auto Collect Coins",
+    Default = false,
+    Callback = function(Value)
+        AutoCollectCoins:Toggle(Value)
+        OrionLib:MakeNotification({
+            Name = "Auto Collect Coins",
+            Content = Value and "Enabled" or "Disabled",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
 })
 
 local InfoTab = Window:MakeTab({
