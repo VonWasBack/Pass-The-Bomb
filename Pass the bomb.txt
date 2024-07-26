@@ -11,6 +11,12 @@ local Config = {
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
     TeleportAfterPass = false 
+    ESPColorMode = "Normal"
+}
+
+local ESP = {
+    Enabled = false,
+    Players = {}
 }
 
 -- Utility Functions
@@ -136,7 +142,12 @@ function ESP:UpdateESP(player, espData)
     if not rootPart then return end
 
     local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-    local color = isHoldingBomb(player) and Color3.new(1, 0, 0) or Color3.new(0, 1, 0)
+    local color
+    if Config.ESPColorMode == "Normal" then
+        color = isHoldingBomb(player) and Color3.new(1, 0, 0) or Color3.new(0, 1, 0)
+    else -- "AllRed" mode
+        color = Color3.new(1, 0, 0)
+    end
 
     if onScreen then
         espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
@@ -219,6 +230,21 @@ MainTab:AddToggle({
         })
     end
 })
+
+MainTab:AddToggle({
+    Name = "ESP Color Mode",
+    Default = false,
+    Callback = function(Value)
+        Config.ESPColorMode = Value and "AllRed" or "Normal"
+        OrionLib:MakeNotification({
+            Name = "ESP Color Mode",
+            Content = Value and "All Red" or "Normal (Red/Green)",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
 
 MainTab:AddToggle({
     Name = "Teleport After Pass",
