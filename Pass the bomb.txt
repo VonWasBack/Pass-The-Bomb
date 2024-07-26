@@ -6,8 +6,8 @@ local Workspace = game:GetService("Workspace")
 local Config = {
     Player = Players.LocalPlayer,
     BombName = "Bomb",
-    ESPColorNoBomb = Color3.fromRGB(0, 255, 0),  -- Green for players without bomb
-    ESPColorWithBomb = Color3.fromRGB(255, 0, 0),  -- Red for player with bomb
+    ESPColorNoBomb = Color3.fromRGB(0, 255, 0),
+    ESPColorWithBomb = Color3.fromRGB(255, 0, 0),
     ESPLineThickness = 2,
     ESPTextSize = 20,
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
@@ -15,7 +15,8 @@ local Config = {
     TeleportAfterPass = false,
     CoinName = "Coin",
     OriginalPosition = nil,
-    UseGreenESP = true  -- New variable to toggle between green and red ESP
+    UseGreenESP = true,
+    AutoRespawn = false 
 }
 
 local function isHoldingBomb(player)
@@ -33,7 +34,6 @@ local function getRandomPlayer()
     return #filteredPlayers > 0 and filteredPlayers[math.random(1, #filteredPlayers)] or nil
 end
 
--- Teleportation Functions
 local function teleportTo(destination)
     local character = Config.Player.Character
     if character and character:FindFirstChild("HumanoidRootPart") and destination then
@@ -71,7 +71,6 @@ local function returnToOriginalPosition()
     end
 end
 
--- Auto Win Functionality
 local AutoWin = {
     Enabled = false,
     Connection = nil
@@ -99,7 +98,6 @@ function AutoWin:Toggle(value)
     end
 end
 
--- ESP Functionality
 local ESP = {
     Enabled = false,
     Players = {}
@@ -183,17 +181,14 @@ function ESP:Toggle(value)
     end
 end
 
--- Initialize ESP for existing players
 for _, player in ipairs(Players:GetPlayers()) do
     ESP:CreateForPlayer(player)
 end
 
--- Add ESP for new players
 Players.PlayerAdded:Connect(function(player)
     ESP:CreateForPlayer(player)
 end)
 
--- Auto Collect Coins Functionality
 local AutoCollectCoins = {
     Enabled = false,
     Connection = nil
@@ -209,6 +204,37 @@ function AutoCollectCoins:Toggle(value)
                 end
             end
         end)
+    elseif self.Connection then
+        self.Connection:Disconnect()
+        self.Connection = nil
+    end
+end
+
+local AutoRespawn = {
+    Enabled = false,
+    Connection = nil
+}
+
+function AutoRespawn:Toggle(value)
+    self.Enabled = value
+    if self.Enabled then
+        self.Connection = Config.Player.CharacterAdded:Connect(function()
+            print("Character added, waiting for Humanoid...")
+            local humanoid = Config.Player.Character:WaitForChild("Humanoid")
+            humanoid.Died:Connect(function()
+                task.wait(0.5)
+                Config.Player:LoadCharacter()
+            end)
+        end)
+        if Config.Player.Character then
+            local humanoid = Config.Player.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.Died:Connect(function()
+                    task.wait(0.5) 
+                    Config.Player:LoadCharacter()
+                end)
+            end
+        end
     elseif self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
@@ -313,6 +339,21 @@ MainTab:AddToggle({
     end
 })
 
+MainTab:AddToggle({
+    Name = "Auto Respawn",
+    Default = false,
+    Callback = function(Value)
+        AutoRespawn:Toggle(Value)
+        Config.AutoRespawn = Value
+        OrionLib:MakeNotification({
+            Name = "Auto Respawn",
+            Content = Value and "Enabled" or "Disabled",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
 local InfoTab = Window:MakeTab({
     Name = "Information",
     Icon = "rbxassetid://4483345998",
@@ -320,7 +361,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.8: Added option to choose between green and red ESP")
+InfoTab:AddParagraph("Update Logs", "Version 2.9: Added Auto Respawn feature")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
@@ -336,3 +377,7 @@ InfoTab:AddButton({
 })
 
 OrionLib:Init()
+
+if Config.AutoRespawn then
+    AutoRespawn:Toggle(true)
+end
