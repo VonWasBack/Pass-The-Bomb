@@ -14,7 +14,8 @@ local Config = {
     PassDelay = 0.1,
     TeleportAfterPass = false,
     CoinName = "Coin",
-    OriginalPosition = nil
+    OriginalPosition = nil,
+    UseGreenESP = true  -- New variable to toggle between green and red ESP
 }
 
 local function isHoldingBomb(player)
@@ -141,7 +142,12 @@ function ESP:UpdateESP(player, espData)
     local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
 
     if onScreen then
-        local espColor = isHoldingBomb(player) and Config.ESPColorWithBomb or Config.ESPColorNoBomb
+        local espColor
+        if Config.UseGreenESP then
+            espColor = isHoldingBomb(player) and Config.ESPColorWithBomb or Config.ESPColorNoBomb
+        else
+            espColor = isHoldingBomb(player) and Config.ESPColorWithBomb or Config.ESPColorWithBomb
+        end
 
         espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
         espData.Line.To = Vector2.new(screenPos.X, screenPos.Y)
@@ -247,6 +253,20 @@ MainTab:AddToggle({
 })
 
 MainTab:AddToggle({
+    Name = "Use Green ESP",
+    Default = true,
+    Callback = function(Value)
+        Config.UseGreenESP = Value
+        OrionLib:MakeNotification({
+            Name = "ESP Color",
+            Content = Value and "Set to Green (Red for bomb)" or "Set to Red",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+MainTab:AddToggle({
     Name = "Teleport After Pass",
     Default = false,
     Callback = function(Value)
@@ -300,7 +320,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.7: ESP now shows green for players without bomb, red for player with bomb")
+InfoTab:AddParagraph("Update Logs", "Version 2.8: Added option to choose between green and red ESP")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
