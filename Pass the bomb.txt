@@ -12,7 +12,8 @@ local Config = {
     PassDelay = 0.1,
     TeleportAfterPass = false,
     ESPColor = Color3.new(0, 1, 0), -- Default Green ESP
-    CoinName = "Coin"
+    CoinName = "Coin",
+    OriginalPosition = nil
 }
 
 -- Utility Functions
@@ -63,12 +64,9 @@ local function teleportToRandomPlayer()
 end
 
 local function returnToOriginalPosition()
-    if Config.Player.Character and Config.Player.Character:FindFirstChild("HumanoidRootPart") then
-        local currentPos = Config.Player.Character.HumanoidRootPart.Position
-        local cameraPos = Workspace.CurrentCamera.CFrame.Position
-        local direction = (cameraPos - currentPos).Unit
-        local targetPos = currentPos - direction * 5 -- Move 5 studs away from the camera
-        teleportTo(CFrame.new(targetPos, cameraPos))
+    if Config.OriginalPosition then
+        teleportTo(Config.OriginalPosition)
+        Config.OriginalPosition = nil
     end
 end
 
@@ -83,6 +81,9 @@ function AutoWin:Toggle(value)
     if self.Enabled then
         self.Connection = RunService.Heartbeat:Connect(function()
             if isHoldingBomb(Config.Player) then
+                if not Config.OriginalPosition then
+                    Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
+                end
                 teleportToRandomPlayer()
                 task.wait(Config.PassDelay)
                 if not Config.TeleportAfterPass then
