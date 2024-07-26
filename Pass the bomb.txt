@@ -11,12 +11,12 @@ local Config = {
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
     TeleportAfterPass = false,
-    ESPColor = Color3.new(0, 1, 0), -- Default Green ESP
+    BombESPColor = Color3.new(1, 0, 0), -- Red color for bomb holder
+    NormalESPColor = Color3.new(0, 1, 0), -- Green color for other players
     CoinName = "Coin",
     OriginalPosition = nil
 }
 
--- Utility Functions
 local function isHoldingBomb(player)
     return player.Character and player.Character:FindFirstChild(Config.BombName) ~= nil
 end
@@ -139,7 +139,9 @@ function ESP:UpdateESP(player, espData)
     if not rootPart then return end
 
     local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-    local color = Config.ESPColor
+    
+    -- Set color based on whether the player is holding the bomb
+    local color = isHoldingBomb(player) and Config.BombESPColor or Config.NormalESPColor
 
     if onScreen then
         espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
@@ -245,20 +247,7 @@ MainTab:AddToggle({
     end
 })
 
-MainTab:AddDropdown({
-    Name = "ESP Color",
-    Default = "Green",
-    Options = {"Green", "Red"},
-    Callback = function(Value)
-        Config.ESPColor = Value == "Green" and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        OrionLib:MakeNotification({
-            Name = "ESP Color",
-            Content = "Set to " .. Value,
-            Image = "rbxassetid://4483345998",
-            Time = 5
-        })
-    end
-})
+MainTab:AddParagraph("ESP Colors", "Green: Normal players\nRed: Bomb holder")
 
 MainTab:AddToggle({
     Name = "Teleport After Pass",
@@ -314,7 +303,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.6: Fixed AutoWin functionality, improved teleportation stability")
+InfoTab:AddParagraph("Update Logs", "Version 2.7: Implemented red ESP for bomb holder, improved ESP functionality")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
