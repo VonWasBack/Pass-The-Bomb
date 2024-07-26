@@ -6,8 +6,8 @@ local Workspace = game:GetService("Workspace")
 local Config = {
     Player = Players.LocalPlayer,
     BombName = "Bomb",
-    ESPColorNoBomb = Color3.fromRGB(0, 255, 0),
-    ESPColorWithBomb = Color3.fromRGB(255, 0, 0),
+    ESPColorNoBomb = Color3.fromRGB(0, 255, 0),  -- Green for players without bomb
+    ESPColorWithBomb = Color3.fromRGB(255, 0, 0),  -- Red for player with bomb
     ESPLineThickness = 2,
     ESPTextSize = 20,
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
@@ -16,7 +16,7 @@ local Config = {
     CoinName = "Coin",
     OriginalPosition = nil,
     UseGreenESP = true,
-    AutoRespawn = false 
+    AutoRespawn = false  -- Variable for auto respawn feature
 }
 
 local function isHoldingBomb(player)
@@ -34,6 +34,7 @@ local function getRandomPlayer()
     return #filteredPlayers > 0 and filteredPlayers[math.random(1, #filteredPlayers)] or nil
 end
 
+-- Teleportation Functions
 local function teleportTo(destination)
     local character = Config.Player.Character
     if character and character:FindFirstChild("HumanoidRootPart") and destination then
@@ -71,6 +72,7 @@ local function returnToOriginalPosition()
     end
 end
 
+-- Auto Win Functionality
 local AutoWin = {
     Enabled = false,
     Connection = nil
@@ -98,6 +100,7 @@ function AutoWin:Toggle(value)
     end
 end
 
+-- ESP Functionality
 local ESP = {
     Enabled = false,
     Players = {}
@@ -181,14 +184,17 @@ function ESP:Toggle(value)
     end
 end
 
+-- Initialize ESP for existing players
 for _, player in ipairs(Players:GetPlayers()) do
     ESP:CreateForPlayer(player)
 end
 
+-- Add ESP for new players
 Players.PlayerAdded:Connect(function(player)
     ESP:CreateForPlayer(player)
 end)
 
+-- Auto Collect Coins Functionality
 local AutoCollectCoins = {
     Enabled = false,
     Connection = nil
@@ -210,34 +216,59 @@ function AutoCollectCoins:Toggle(value)
     end
 end
 
+-- Improved Auto Respawn Functionality
 local AutoRespawn = {
     Enabled = false,
-    Connection = nil
+    Connection = nil,
+    RespawnDelay = 1  -- Delay before respawning (in seconds)
 }
 
 function AutoRespawn:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self.Connection = Config.Player.CharacterAdded:Connect(function()
-            print("Character added, waiting for Humanoid...")
-            local humanoid = Config.Player.Character:WaitForChild("Humanoid")
-            humanoid.Died:Connect(function()
-                task.wait(0.5)
-                Config.Player:LoadCharacter()
-            end)
-        end)
-        if Config.Player.Character then
-            local humanoid = Config.Player.Character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.Died:Connect(function()
-                    task.wait(0.5) 
-                    Config.Player:LoadCharacter()
-                end)
+        self:SetupRespawnListener()
+    else
+        self:RemoveRespawnListener()
+    end
+end
+
+function AutoRespawn:SetupRespawnListener()
+    self:RemoveRespawnListener()  -- Remove any existing listener
+
+    local function onCharacterAdded(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        humanoid.Died:Connect(function()
+            if self.Enabled then
+                print("Player died, attempting to respawn...")
+                task.wait(self.RespawnDelay)
+                self:RespawnPlayer()
             end
-        end
-    elseif self.Connection then
+        end)
+    end
+
+    -- Set up listener for future spawns
+    self.Connection = Config.Player.CharacterAdded:Connect(onCharacterAdded)
+
+    -- Handle the case where the character already exists
+    if Config.Player.Character then
+        onCharacterAdded(Config.Player.Character)
+    end
+end
+
+function AutoRespawn:RemoveRespawnListener()
+    if self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
+    end
+end
+
+function AutoRespawn:RespawnPlayer()
+    if Config.Player.Character and Config.Player.Character:FindFirstChild("Humanoid") then
+        if Config.Player.Character.Humanoid.Health <= 0 then
+            Config.Player:LoadCharacter()
+        end
+    else
+        Config.Player:LoadCharacter()
     end
 end
 
@@ -354,6 +385,25 @@ MainTab:AddToggle({
     end
 })
 
+MainTab:AddSlider({
+    Name = "Respawn Delay",
+    Min = 0,
+    Max = 5,
+    Default = 1,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 0.1,
+    ValueName = "seconds",
+    Callback = function(Value)
+        AutoRespawn.RespawnDelay = Value
+        OrionLib:MakeNotification({
+            Name = "Respawn Delay",
+            Content = "Set to " .. string.format("%.1f", Value) .. " seconds",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end    
+})
+
 local InfoTab = Window:MakeTab({
     Name = "Information",
     Icon = "rbxassetid://4483345998",
@@ -361,7 +411,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.9: Added Auto Respawn feature")
+InfoTab:AddParagraph("Update Logs", "Version 3.0: Improved Auto Respawn feature with adjustable delay")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
@@ -378,6 +428,7 @@ InfoTab:AddButton({
 
 OrionLib:Init()
 
+-- Initialize Auto Respawn if it's enabled by default
 if Config.AutoRespawn then
     AutoRespawn:Toggle(true)
 end
