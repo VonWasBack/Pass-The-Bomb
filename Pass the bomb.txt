@@ -35,7 +35,7 @@ local function teleportTo(destination)
     if character and character:FindFirstChild("HumanoidRootPart") and destination then
         local humanoid = character:FindFirstChild("Humanoid")
         if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+            humanoid.PlatformStand = true
         end
         
         character.HumanoidRootPart.CFrame = destination
@@ -43,7 +43,7 @@ local function teleportTo(destination)
         task.wait(0.1) -- Short delay to ensure the teleport has completed
         
         if humanoid then
-            humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+            humanoid.PlatformStand = false
         end
     end
 end
@@ -53,7 +53,7 @@ local function teleportToRandomPlayer()
     if randomPlayer and randomPlayer.Character then
         local targetRoot = randomPlayer.Character:FindFirstChild("HumanoidRootPart")
         if targetRoot then
-            local offset = Vector3.new(0, 3, 0) -- Adjust this offset as needed
+            local offset = Vector3.new(0, 0, 2) -- Teleport behind the player
             local targetCFrame = targetRoot.CFrame * CFrame.new(offset)
             teleportTo(targetCFrame)
         end
@@ -62,7 +62,11 @@ end
 
 local function returnToOriginalPosition()
     if Config.Player.Character and Config.Player.Character:FindFirstChild("HumanoidRootPart") then
-        teleportTo(CFrame.new(Workspace.CurrentCamera.CFrame.Position))
+        local currentPos = Config.Player.Character.HumanoidRootPart.Position
+        local cameraPos = Workspace.CurrentCamera.CFrame.Position
+        local direction = (cameraPos - currentPos).Unit
+        local targetPos = currentPos - direction * 5 -- Move 5 studs away from the camera
+        teleportTo(CFrame.new(targetPos, cameraPos))
     end
 end
 
@@ -256,7 +260,7 @@ local InfoTab = Window:MakeTab({
 })
 
 InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.5: Improved Auto Win functionality, fixed teleportation issues")
+InfoTab:AddParagraph("Update Logs", "Version 2.6: Fixed AutoWin functionality, improved teleportation stability")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
