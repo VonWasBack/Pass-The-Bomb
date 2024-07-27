@@ -2,7 +2,7 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shl
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = {
     Player = Players.LocalPlayer,
@@ -87,87 +87,22 @@ local AutoWin = {
 function AutoWin:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self:Start()
-    else
-        self:Stop()
-    end
-end
-
-function AutoWin:Start()
-    self.Connection = RunService.Heartbeat:Connect(function()
-        self:RunAutoWin()
-    end)
-end
-
-function AutoWin:Stop()
-    if self.Connection then
+        self.Connection = RunService.Heartbeat:Connect(function()
+            if isHoldingBomb(Config.Player) then
+                if not Config.OriginalPosition then
+                    Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
+                end
+                teleportToRandomPlayer()
+                task.wait(Config.PassDelay)
+                if not Config.TeleportAfterPass then
+                    returnToOriginalPosition()
+                end
+            end
+        end)
+    elseif self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
-        self:ReturnToOriginalPosition()
-    end
-end
-
-function AutoWin:RunAutoWin()
-    local character = Config.Player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-
-    if self:IsHoldingBomb(Config.Player) then
-        if not Config.OriginalPosition then
-            Config.OriginalPosition = character.HumanoidRootPart.CFrame
-        end
-        self:TeleportToRandomPlayer()
-        task.wait(Config.PassDelay)
-        if not Config.TeleportAfterPass then
-            self:ReturnToOriginalPosition()
-        end
-    else
-        -- If not holding the bomb, continue moving towards other players
-        self:MoveTowardsNearestPlayer()
-    end
-end
-
-function AutoWin:IsHoldingBomb(player)
-    return player.Character and player.Character:FindFirstChild("Bomb")
-end
-
-function AutoWin:TeleportToRandomPlayer()
-    local players = game.Players:GetPlayers()
-    local randomPlayer = players[math.random(1, #players)]
-    if randomPlayer ~= Config.Player and randomPlayer.Character and randomPlayer.Character:FindFirstChild("HumanoidRootPart") then
-        Config.Player.Character.HumanoidRootPart.CFrame = randomPlayer.Character.HumanoidRootPart.CFrame
-        game.ReplicatedStorage.Events.PassBomb:FireServer(randomPlayer)
-    end
-end
-
-function AutoWin:ReturnToOriginalPosition()
-    if Config.OriginalPosition and Config.Player.Character and Config.Player.Character:FindFirstChild("HumanoidRootPart") then
-        Config.Player.Character.HumanoidRootPart.CFrame = Config.OriginalPosition
-        Config.OriginalPosition = nil
-    end
-end
-
-function AutoWin:MoveTowardsNearestPlayer()
-    local character = Config.Player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-
-    local humanoid = character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return end
-
-    local nearestPlayer, nearestDistance = nil, math.huge
-    for _, player in ipairs(game.Players:GetPlayers()) do
-        if player ~= Config.Player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (player.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
-            if distance < nearestDistance then
-                nearestPlayer = player
-                nearestDistance = distance
-            end
-        end
-    end
-
-    if nearestPlayer then
-        humanoid:MoveTo(nearestPlayer.Character.HumanoidRootPart.Position)
-    else
-        humanoid:MoveTo(Vector3.new(0, 0, 0))
+        returnToOriginalPosition()
     end
 end
 
@@ -263,7 +198,8 @@ end)
 local AutoCollectCoins = {
     Enabled = false,
     Connection = nil,
-    LastCollected = 0
+    Collecting = false,
+    LastCollected = tick()
 }
 
 function AutoCollectCoins:Toggle(value)
@@ -304,58 +240,23 @@ local AutoCollectRespawnTokens = {
     Connection = nil
 }
 
-function AutoCollectCoins:Toggle(value)
+function AutoCollectRespawnTokens:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self:StartCollecting()
-    else
-        self:StopCollecting()
-    end
-end
-
-function AutoCollectCoins:StartCollecting()
-    local coinFolder = Workspace:FindFirstChild(Config.CoinFolderName)
-    if not coinFolder then
-        warn("Coin folder not found!")
-        return
-    end
-
-    self.Connection = coinFolder.ChildAdded:Connect(function(coin)
-        if self.Enabled and table.find(Config.CoinModelNames, coin.Name) then
-            self:CollectCoin(coin)
-        end
-    end)
-
-    -- Collect any existing coins
-    for _, coin in ipairs(coinFolder:GetChildren()) do
-        if table.find(Config.CoinModelNames, coin.Name) then
-            self:CollectCoin(coin)
-        end
-    end
-end
-
-function AutoCollectCoins:StopCollecting()
-    if self.Connection then
+        self.Connection = RunService.Heartbeat:Connect(function()
+            for _, token in ipairs(Workspace:GetDescendants()) do
+                if token.Name == Config.RespawnTokenName and token:IsA("IntValue") then
+                    token.Parent = Config.Player.Backpack
+                    if Config.Player.Character:FindFirstChild("Humanoid") then
+                        Config.Player.Character.Humanoid.Health = 0
+                    end
+                    break
+                end
+            end
+        end)
+    elseif self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
-    end
-end
-
-function AutoCollectCoins:CollectCoin(coin)
-    local character = Config.Player.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
-
-    -- Wait for the coin to fully load
-    if not coin:IsA("Model") then
-        coin.ChildAdded:Wait()
-    end
-
-    for _, part in ipairs(coin:GetDescendants()) do
-        if part:IsA("BasePart") then
-            -- Teleport the coin to the player
-            part.CFrame = character.HumanoidRootPart.CFrame
-            break
-        end
     end
 end
 
@@ -368,24 +269,13 @@ local ChatSpam = {
 function ChatSpam:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self:StartSpamming()
-    else
-        self:StopSpamming()
-    end
-end
-
-function ChatSpam:StartSpamming()
-    self:StopSpamming() -- Ensure any existing connection is stopped
-    self.Connection = RunService.Heartbeat:Connect(function()
-        if self.Enabled then
-            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Config.ChatSpamMessage, "All")
-            task.wait(Config.ChatSpamDelay)
-        end
-    end)
-end
-
-function ChatSpam:StopSpamming()
-    if self.Connection then
+        self.Connection = RunService.Heartbeat:Connect(function()
+            while self.Enabled do
+                ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Config.ChatSpamMessage, "All")
+                task.wait(Config.ChatSpamDelay)
+            end
+        end)
+    elseif self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
     end
@@ -558,19 +448,16 @@ local InfoTab = Window:MakeTab({
     PremiumOnly = false
 })
 
-InfoTab:AddParagraph("Script Information", "This script was created by Von for Pass The Bomb. It includes features like Auto Win, ESP, Auto Collect Coins, and more.")
-
-InfoTab:AddParagraph("How to Use", "Toggle the features you want to use in the Main Features tab. Adjust settings as needed.")
-
-InfoTab:AddParagraph("Updates", "Check the Discord server for updates and new features.")
+InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
+InfoTab:AddParagraph("Update Logs", "Version 2.6: Fixed AutoWin functionality, improved teleportation stability")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
     Callback = function()
         setclipboard(Config.DiscordLink)
         OrionLib:MakeNotification({
-            Name = "Discord Invite",
-            Content = "Copied to clipboard!",
+            Name = "Discord Link Copied",
+            Content = "The invite link has been copied to your clipboard.",
             Image = "rbxassetid://4483345998",
             Time = 5
         })
@@ -578,9 +465,3 @@ InfoTab:AddButton({
 })
 
 OrionLib:Init()
-
-game.Players.LocalPlayer.OnTeleport:Connect(function(State)
-    if State == Enum.TeleportState.Started then
-        OrionLib:Destroy()
-    end
-end)
