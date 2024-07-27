@@ -2,6 +2,7 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shl
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
 
 local Config = {
     Player = Players.LocalPlayer,
@@ -17,7 +18,10 @@ local Config = {
     RespawnTokenName = "RespawnToken", -- Name of the RespawnToken IntValue
     CoinFolderName = "DisastersFolder",
     CoinModelNames = {"Coin1", "Coin2", "Coin3", "Coin4", "Coin5", "Coin6"},
-    OriginalPosition = nil
+    CoinSpawnTime = 5, -- Time in seconds between coin spawns
+    OriginalPosition = nil,
+    ChatSpamMessage = "Spam message",
+    ChatSpamDelay = 1 -- Time in seconds between chat messages
 }
 
 -- Utility Functions
@@ -194,14 +198,15 @@ end)
 local AutoCollectCoins = {
     Enabled = false,
     Connection = nil,
-    Collecting = false
+    Collecting = false,
+    LastCollected = tick()
 }
 
 function AutoCollectCoins:Toggle(value)
     self.Enabled = value
     if self.Enabled then
         self.Connection = RunService.Heartbeat:Connect(function()
-            if not self.Collecting then
+            if not self.Collecting and tick() - self.LastCollected >= Config.CoinSpawnTime then
                 self.Collecting = true
                 local coinFolder = Workspace:FindFirstChild(Config.CoinFolderName)
                 if coinFolder then
@@ -219,6 +224,7 @@ function AutoCollectCoins:Toggle(value)
                         end
                     end
                 end
+                self.LastCollected = tick()
                 self.Collecting = false
             end
         end)
@@ -246,6 +252,27 @@ function AutoCollectRespawnTokens:Toggle(value)
                     end
                     break
                 end
+            end
+        end)
+    elseif self.Connection then
+        self.Connection:Disconnect()
+        self.Connection = nil
+    end
+end
+
+-- Chat Spam Functionality
+local ChatSpam = {
+    Enabled = false,
+    Connection = nil
+}
+
+function ChatSpam:Toggle(value)
+    self.Enabled = value
+    if self.Enabled then
+        self.Connection = RunService.Heartbeat:Connect(function()
+            while self.Enabled do
+                game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Config.ChatSpamMessage, "All")
+                task.wait(Config.ChatSpamDelay)
             end
         end)
     elseif self.Connection then
@@ -361,6 +388,54 @@ MainTab:AddToggle({
         OrionLib:MakeNotification({
             Name = "Auto Collect RespawnTokens",
             Content = Value and "Enabled" or "Disabled",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+MainTab:AddToggle({
+    Name = "Chat Spam",
+    Default = false,
+    Callback = function(Value)
+        ChatSpam:Toggle(Value)
+        OrionLib:MakeNotification({
+            Name = "Chat Spam",
+            Content = Value and "Enabled" or "Disabled",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+MainTab:AddTextbox({
+    Name = "Chat Spam Message",
+    Default = Config.ChatSpamMessage,
+    TextDisappear = false,
+    Callback = function(Value)
+        Config.ChatSpamMessage = Value
+        OrionLib:MakeNotification({
+            Name = "Chat Spam Message",
+            Content = "Set to " .. Value,
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+MainTab:AddSlider({
+    Name = "Chat Spam Delay",
+    Min = 0.1,
+    Max = 5,
+    Default = Config.ChatSpamDelay,
+    Color = Color3.fromRGB(255,255,255),
+    Increment = 0.1,
+    ValueName = "seconds",
+    Callback = function(Value)
+        Config.ChatSpamDelay = Value
+        OrionLib:MakeNotification({
+            Name = "Chat Spam Delay",
+            Content = "Set to " .. string.format("%.1f", Value) .. " seconds",
             Image = "rbxassetid://4483345998",
             Time = 5
         })
