@@ -269,13 +269,24 @@ local ChatSpam = {
 function ChatSpam:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self.Connection = RunService.Heartbeat:Connect(function()
-            while self.Enabled do
-                game.ReplicatedStorage.DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Config.ChatSpamMessage, "All")
-                task.wait(Config.ChatSpamDelay)
-            end
-        end)
-    elseif self.Connection then
+        self:StartSpamming()
+    else
+        self:StopSpamming()
+    end
+end
+
+function ChatSpam:StartSpamming()
+    self:StopSpamming() -- Ensure any existing connection is stopped
+    self.Connection = RunService.Heartbeat:Connect(function()
+        if self.Enabled then
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(Config.ChatSpamMessage, "All")
+            task.wait(Config.ChatSpamDelay)
+        end
+    end)
+end
+
+function ChatSpam:StopSpamming()
+    if self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
     end
@@ -448,16 +459,19 @@ local InfoTab = Window:MakeTab({
     PremiumOnly = false
 })
 
-InfoTab:AddParagraph("Credits", "Original by Jam, Enhanced by Von")
-InfoTab:AddParagraph("Update Logs", "Version 2.6: Fixed AutoWin functionality, improved teleportation stability")
+InfoTab:AddParagraph("Script Information", "This script was created by Von for Pass The Bomb. It includes features like Auto Win, ESP, Auto Collect Coins, and more.")
+
+InfoTab:AddParagraph("How to Use", "Toggle the features you want to use in the Main Features tab. Adjust settings as needed.")
+
+InfoTab:AddParagraph("Updates", "Check the Discord server for updates and new features.")
 
 InfoTab:AddButton({
     Name = "Copy Discord Invite",
     Callback = function()
         setclipboard(Config.DiscordLink)
         OrionLib:MakeNotification({
-            Name = "Discord Link Copied",
-            Content = "The invite link has been copied to your clipboard.",
+            Name = "Discord Invite",
+            Content = "Copied to clipboard!",
             Image = "rbxassetid://4483345998",
             Time = 5
         })
@@ -465,3 +479,9 @@ InfoTab:AddButton({
 })
 
 OrionLib:Init()
+
+game.Players.LocalPlayer.OnTeleport:Connect(function(State)
+    if State == Enum.TeleportState.Started then
+        OrionLib:Destroy()
+    end
+end)
