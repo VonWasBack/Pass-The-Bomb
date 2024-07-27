@@ -2,7 +2,6 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shl
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
-local Debris = game:GetService("Debris")
 
 local Config = {
     Player = Players.LocalPlayer,
@@ -12,8 +11,8 @@ local Config = {
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
     TeleportAfterPass = false,
-    ESPColor = Color3.new(0, 1, 0),
-    RespawnTokenName = "RespawnToken",
+    ESPColor = Color3.new(0, 1, 0), -- Default Green ESP for players without the bomb
+    RespawnTokenName = "RespawnToken", -- Name of the RespawnToken IntValue
     CoinFolderName = "DisastersFolder",
     CoinModelNames = {"Coin1", "Coin2", "Coin3", "Coin4", "Coin5", "Coin6"},
     OriginalPosition = nil
@@ -46,7 +45,7 @@ local function teleportTo(destination)
         
         character.HumanoidRootPart.CFrame = destination
         
-        task.wait(0.1)
+        task.wait(0.1) -- Short delay to ensure the teleport has completed
         
         if humanoid then
             humanoid.PlatformStand = false
@@ -59,7 +58,7 @@ local function teleportToRandomPlayer()
     if randomPlayer and randomPlayer.Character then
         local targetRoot = randomPlayer.Character:FindFirstChild("HumanoidRootPart")
         if targetRoot then
-            local offset = Vector3.new(0, 0, 2)
+            local offset = Vector3.new(0, 0, 2) -- Teleport behind the player
             local targetCFrame = targetRoot.CFrame * CFrame.new(offset)
             teleportTo(targetCFrame)
         end
@@ -73,6 +72,7 @@ local function returnToOriginalPosition()
     end
 end
 
+-- Auto Win Functionality
 local AutoWin = {
     Enabled = false,
     Connection = nil
@@ -205,7 +205,8 @@ function AutoCollectCoins:Toggle(value)
                         for _, part in ipairs(coin:GetDescendants()) do
                             if part:IsA("BasePart") then
                                 teleportTo(part.CFrame)
-                                task.wait(0.1)
+                                task.wait(0.1) -- Short delay to ensure the teleport has completed
+                                break
                             end
                         end
                     end
@@ -230,7 +231,7 @@ function AutoCollectRespawnTokens:Toggle(value)
         self.Connection = RunService.Heartbeat:Connect(function()
             for _, token in ipairs(Workspace:GetDescendants()) do
                 if token.Name == Config.RespawnTokenName and token:IsA("IntValue") then
-                    token.Parent = Config.Player
+                    token.Parent = Config.Player.Backpack
                     if Config.Player.Character:FindFirstChild("Humanoid") then
                         Config.Player.Character.Humanoid.Health = 0
                     end
