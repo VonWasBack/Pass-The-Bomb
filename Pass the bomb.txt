@@ -206,14 +206,12 @@ function AutoCollectCoins:Toggle(value)
         if coinFolder then
             self.Connection = coinFolder.ChildAdded:Connect(function(coin)
                 if table.find(Config.CoinModelNames, coin.Name) and coin:IsA("Model") then
-                    for _, part in ipairs(coin:GetDescendants()) do
-                        if part:IsA("BasePart") then
-                            task.wait(0.1) -- Short delay to ensure the teleport has completed
-                            Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
-                            teleportTo(part.CFrame)
-                            returnToOriginalPosition()
-                            break
-                        end
+                    local part = coin:FindFirstChildWhichIsA("BasePart", true)
+                    if part then
+                        Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
+                        teleportTo(part.CFrame)
+                        task.wait(0.1) -- Short delay to ensure the teleport has completed
+                        returnToOriginalPosition()
                     end
                 end
             end)
