@@ -208,9 +208,9 @@ function AutoCollectCoins:Toggle(value)
                 if table.find(Config.CoinModelNames, coin.Name) and coin:IsA("Model") then
                     for _, part in ipairs(coin:GetDescendants()) do
                         if part:IsA("BasePart") then
+                            task.wait(0.1) -- Short delay to ensure the teleport has completed
                             Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
                             teleportTo(part.CFrame)
-                            task.wait(0.1) -- Short delay to ensure the teleport has completed
                             returnToOriginalPosition()
                             break
                         end
