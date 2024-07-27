@@ -18,7 +18,6 @@ local Config = {
     RespawnTokenName = "RespawnToken", -- Name of the RespawnToken IntValue
     CoinFolderName = "DisastersFolder",
     CoinModelNames = {"Coin1", "Coin2", "Coin3", "Coin4", "Coin5", "Coin6"},
-    CoinSpawnTime = 5, -- Time in seconds between coin spawns
     OriginalPosition = nil,
     ChatSpamMessage = "Spam message",
     ChatSpamDelay = 1 -- Time in seconds between chat messages
@@ -197,37 +196,28 @@ end)
 -- Auto Collect Coins Functionality
 local AutoCollectCoins = {
     Enabled = false,
-    Connection = nil,
-    Collecting = false,
-    LastCollected = tick()
+    Connection = nil
 }
 
 function AutoCollectCoins:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self.Connection = RunService.Heartbeat:Connect(function()
-            if not self.Collecting and tick() - self.LastCollected >= Config.CoinSpawnTime then
-                self.Collecting = true
-                local coinFolder = Workspace:FindFirstChild(Config.CoinFolderName)
-                if coinFolder then
-                    for _, coin in ipairs(coinFolder:GetChildren()) do
-                        if table.find(Config.CoinModelNames, coin.Name) and coin:IsA("Model") then
-                            for _, part in ipairs(coin:GetDescendants()) do
-                                if part:IsA("BasePart") then
-                                    Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
-                                    teleportTo(part.CFrame)
-                                    task.wait(0.1) -- Short delay to ensure the teleport has completed
-                                    returnToOriginalPosition()
-                                    break
-                                end
-                            end
+        local coinFolder = Workspace:FindFirstChild(Config.CoinFolderName)
+        if coinFolder then
+            self.Connection = coinFolder.ChildAdded:Connect(function(coin)
+                if table.find(Config.CoinModelNames, coin.Name) and coin:IsA("Model") then
+                    for _, part in ipairs(coin:GetDescendants()) do
+                        if part:IsA("BasePart") then
+                            Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
+                            teleportTo(part.CFrame)
+                            task.wait(0.1) -- Short delay to ensure the teleport has completed
+                            returnToOriginalPosition()
+                            break
                         end
                     end
                 end
-                self.LastCollected = tick()
-                self.Collecting = false
-            end
-        end)
+            end)
+        end
     elseif self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
