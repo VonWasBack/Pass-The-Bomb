@@ -198,8 +198,7 @@ end)
 local AutoCollectCoins = {
     Enabled = false,
     Connection = nil,
-    Collecting = false,
-    LastCollected = tick()
+    LastCollected = 0
 }
 
 function AutoCollectCoins:Toggle(value)
@@ -240,23 +239,58 @@ local AutoCollectRespawnTokens = {
     Connection = nil
 }
 
-function AutoCollectRespawnTokens:Toggle(value)
+function AutoCollectCoins:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self.Connection = RunService.Heartbeat:Connect(function()
-            for _, token in ipairs(Workspace:GetDescendants()) do
-                if token.Name == Config.RespawnTokenName and token:IsA("IntValue") then
-                    token.Parent = Config.Player.Backpack
-                    if Config.Player.Character:FindFirstChild("Humanoid") then
-                        Config.Player.Character.Humanoid.Health = 0
-                    end
-                    break
-                end
-            end
-        end)
-    elseif self.Connection then
+        self:StartCollecting()
+    else
+        self:StopCollecting()
+    end
+end
+
+function AutoCollectCoins:StartCollecting()
+    local coinFolder = Workspace:FindFirstChild(Config.CoinFolderName)
+    if not coinFolder then
+        warn("Coin folder not found!")
+        return
+    end
+
+    self.Connection = coinFolder.ChildAdded:Connect(function(coin)
+        if self.Enabled and table.find(Config.CoinModelNames, coin.Name) then
+            self:CollectCoin(coin)
+        end
+    end)
+
+    -- Collect any existing coins
+    for _, coin in ipairs(coinFolder:GetChildren()) do
+        if table.find(Config.CoinModelNames, coin.Name) then
+            self:CollectCoin(coin)
+        end
+    end
+end
+
+function AutoCollectCoins:StopCollecting()
+    if self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
+    end
+end
+
+function AutoCollectCoins:CollectCoin(coin)
+    local character = Config.Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    -- Wait for the coin to fully load
+    if not coin:IsA("Model") then
+        coin.ChildAdded:Wait()
+    end
+
+    for _, part in ipairs(coin:GetDescendants()) do
+        if part:IsA("BasePart") then
+            -- Teleport the coin to the player
+            part.CFrame = character.HumanoidRootPart.CFrame
+            break
+        end
     end
 end
 
