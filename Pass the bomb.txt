@@ -2,6 +2,7 @@ local OrionLib = loadstring(game:HttpGet(('https://raw.githubusercontent.com/shl
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local Debris = game:GetService("Debris")
 
 local Config = {
     Player = Players.LocalPlayer,
@@ -11,7 +12,7 @@ local Config = {
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
     TeleportAfterPass = false,
-    ESPColor = Color3.new(0, 1, 0), -- Default Green ESP
+    ESPColor = Color3.new(0, 1, 0), -- Default Green ESP for players without the bomb
     RespawnTokenName = "RespawnToken", -- Name of the RespawnToken IntValue
     CoinFolderName = "DisastersFolder",
     CoinModelNames = {"Coin1", "Coin2", "Coin3", "Coin4", "Coin5", "Coin6"},
@@ -204,7 +205,8 @@ function AutoCollectCoins:Toggle(value)
                     if table.find(Config.CoinModelNames, coin.Name) and coin:IsA("Model") then
                         for _, part in ipairs(coin:GetDescendants()) do
                             if part:IsA("BasePart") then
-                                part.CFrame = Config.Player.Character.HumanoidRootPart.CFrame
+                                teleportTo(part.CFrame)
+                                task.wait(0.1) -- Short delay to ensure the teleport has completed
                             end
                         end
                     end
@@ -217,7 +219,7 @@ function AutoCollectCoins:Toggle(value)
     end
 end
 
--- Auto Collect RespawnTokens Functionality
+-- Auto Collect RespawnTokens and Auto Respawn Functionality
 local AutoCollectRespawnTokens = {
     Enabled = false,
     Connection = nil
@@ -230,6 +232,10 @@ function AutoCollectRespawnTokens:Toggle(value)
             for _, token in ipairs(Workspace:GetDescendants()) do
                 if token.Name == Config.RespawnTokenName and token:IsA("IntValue") then
                     token.Parent = Config.Player.Backpack
+                    if Config.Player.Character:FindFirstChild("Humanoid") then
+                        Config.Player.Character.Humanoid.Health = 0
+                    end
+                    break
                 end
             end
         end)
@@ -270,21 +276,6 @@ MainTab:AddToggle({
         OrionLib:MakeNotification({
             Name = "ESP",
             Content = Value and "Enabled" or "Disabled",
-            Image = "rbxassetid://4483345998",
-            Time = 5
-        })
-    end
-})
-
-MainTab:AddDropdown({
-    Name = "ESP Color",
-    Default = "Green",
-    Options = {"Green", "Red"},
-    Callback = function(Value)
-        Config.ESPColor = Value == "Green" and Color3.new(0, 1, 0) or Color3.new(1, 0, 0)
-        OrionLib:MakeNotification({
-            Name = "ESP Color",
-            Content = "Set to " .. Value,
             Image = "rbxassetid://4483345998",
             Time = 5
         })
