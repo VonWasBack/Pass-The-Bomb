@@ -231,7 +231,7 @@ function AutoCollectRespawnTokens:Toggle(value)
         self.Connection = RunService.Heartbeat:Connect(function()
             for _, token in ipairs(Workspace:GetDescendants()) do
                 if token.Name == Config.RespawnTokenName and token:IsA("IntValue") then
-                    token.Parent = Config.Player.Backpack
+                    token.Parent = Config.Player
                     if Config.Player.Character:FindFirstChild("Humanoid") then
                         Config.Player.Character.Humanoid.Health = 0
                     end
