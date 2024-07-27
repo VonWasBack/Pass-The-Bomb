@@ -11,7 +11,9 @@ local Config = {
     DiscordLink = "https://discord.com/invite/bRMmg4q9f7",
     PassDelay = 0.1,
     TeleportAfterPass = false,
-    ESPColor = Color3.new(0, 1, 0), -- Default Green ESP for players without the bomb
+    ESPColorMode = "Green", -- Default ESP color mode
+    ESPGreenColor = Color3.new(0, 1, 0),
+    ESPRedColor = Color3.new(1, 0, 0),
     RespawnTokenName = "RespawnToken", -- Name of the RespawnToken IntValue
     CoinFolderName = "DisastersFolder",
     CoinModelNames = {"Coin1", "Coin2", "Coin3", "Coin4", "Coin5", "Coin6"},
@@ -141,7 +143,7 @@ function ESP:UpdateESP(player, espData)
     if not rootPart then return end
 
     local screenPos, onScreen = Workspace.CurrentCamera:WorldToViewportPoint(rootPart.Position)
-    local color = isHoldingBomb(player) and Color3.new(1, 0, 0) or Config.ESPColor
+    local color = isHoldingBomb(player) and Config.ESPRedColor or (Config.ESPColorMode == "Green" and Config.ESPGreenColor or Config.ESPRedColor)
 
     if onScreen then
         espData.Line.From = Vector2.new(Workspace.CurrentCamera.ViewportSize.X / 2, Workspace.CurrentCamera.ViewportSize.Y / 2)
@@ -191,26 +193,33 @@ end)
 -- Auto Collect Coins Functionality
 local AutoCollectCoins = {
     Enabled = false,
-    Connection = nil
+    Connection = nil,
+    Collecting = false
 }
 
 function AutoCollectCoins:Toggle(value)
     self.Enabled = value
     if self.Enabled then
         self.Connection = RunService.Heartbeat:Connect(function()
-            local coinFolder = Workspace:FindFirstChild(Config.CoinFolderName)
-            if coinFolder then
-                for _, coin in ipairs(coinFolder:GetChildren()) do
-                    if table.find(Config.CoinModelNames, coin.Name) and coin:IsA("Model") then
-                        for _, part in ipairs(coin:GetDescendants()) do
-                            if part:IsA("BasePart") then
-                                teleportTo(part.CFrame)
-                                task.wait(0.1) -- Short delay to ensure the teleport has completed
-                                break
+            if not self.Collecting then
+                self.Collecting = true
+                local coinFolder = Workspace:FindFirstChild(Config.CoinFolderName)
+                if coinFolder then
+                    for _, coin in ipairs(coinFolder:GetChildren()) do
+                        if table.find(Config.CoinModelNames, coin.Name) and coin:IsA("Model") then
+                            for _, part in ipairs(coin:GetDescendants()) do
+                                if part:IsA("BasePart") then
+                                    Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
+                                    teleportTo(part.CFrame)
+                                    task.wait(0.1) -- Short delay to ensure the teleport has completed
+                                    returnToOriginalPosition()
+                                    break
+                                end
                             end
                         end
                     end
                 end
+                self.Collecting = false
             end
         end)
     elseif self.Connection then
@@ -231,7 +240,7 @@ function AutoCollectRespawnTokens:Toggle(value)
         self.Connection = RunService.Heartbeat:Connect(function()
             for _, token in ipairs(Workspace:GetDescendants()) do
                 if token.Name == Config.RespawnTokenName and token:IsA("IntValue") then
-                    token.Parent = Config.Player
+                    token.Parent = Config.Player.Backpack
                     if Config.Player.Character:FindFirstChild("Humanoid") then
                         Config.Player.Character.Humanoid.Health = 0
                     end
@@ -276,6 +285,21 @@ MainTab:AddToggle({
         OrionLib:MakeNotification({
             Name = "ESP",
             Content = Value and "Enabled" or "Disabled",
+            Image = "rbxassetid://4483345998",
+            Time = 5
+        })
+    end
+})
+
+MainTab:AddDropdown({
+    Name = "ESP Color",
+    Default = "Green",
+    Options = {"Green", "Red"},
+    Callback = function(Value)
+        Config.ESPColorMode = Value
+        OrionLib:MakeNotification({
+            Name = "ESP Color",
+            Content = "Set to " .. Value,
             Image = "rbxassetid://4483345998",
             Time = 5
         })
