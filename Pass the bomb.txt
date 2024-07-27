@@ -87,22 +87,87 @@ local AutoWin = {
 function AutoWin:Toggle(value)
     self.Enabled = value
     if self.Enabled then
-        self.Connection = RunService.Heartbeat:Connect(function()
-            if isHoldingBomb(Config.Player) then
-                if not Config.OriginalPosition then
-                    Config.OriginalPosition = Config.Player.Character.HumanoidRootPart.CFrame
-                end
-                teleportToRandomPlayer()
-                task.wait(Config.PassDelay)
-                if not Config.TeleportAfterPass then
-                    returnToOriginalPosition()
-                end
-            end
-        end)
-    elseif self.Connection then
+        self:Start()
+    else
+        self:Stop()
+    end
+end
+
+function AutoWin:Start()
+    self.Connection = RunService.Heartbeat:Connect(function()
+        self:RunAutoWin()
+    end)
+end
+
+function AutoWin:Stop()
+    if self.Connection then
         self.Connection:Disconnect()
         self.Connection = nil
-        returnToOriginalPosition()
+        self:ReturnToOriginalPosition()
+    end
+end
+
+function AutoWin:RunAutoWin()
+    local character = Config.Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    if self:IsHoldingBomb(Config.Player) then
+        if not Config.OriginalPosition then
+            Config.OriginalPosition = character.HumanoidRootPart.CFrame
+        end
+        self:TeleportToRandomPlayer()
+        task.wait(Config.PassDelay)
+        if not Config.TeleportAfterPass then
+            self:ReturnToOriginalPosition()
+        end
+    else
+        -- If not holding the bomb, continue moving towards other players
+        self:MoveTowardsNearestPlayer()
+    end
+end
+
+function AutoWin:IsHoldingBomb(player)
+    return player.Character and player.Character:FindFirstChild("Bomb")
+end
+
+function AutoWin:TeleportToRandomPlayer()
+    local players = game.Players:GetPlayers()
+    local randomPlayer = players[math.random(1, #players)]
+    if randomPlayer ~= Config.Player and randomPlayer.Character and randomPlayer.Character:FindFirstChild("HumanoidRootPart") then
+        Config.Player.Character.HumanoidRootPart.CFrame = randomPlayer.Character.HumanoidRootPart.CFrame
+        game.ReplicatedStorage.Events.PassBomb:FireServer(randomPlayer)
+    end
+end
+
+function AutoWin:ReturnToOriginalPosition()
+    if Config.OriginalPosition and Config.Player.Character and Config.Player.Character:FindFirstChild("HumanoidRootPart") then
+        Config.Player.Character.HumanoidRootPart.CFrame = Config.OriginalPosition
+        Config.OriginalPosition = nil
+    end
+end
+
+function AutoWin:MoveTowardsNearestPlayer()
+    local character = Config.Player.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return end
+
+    local humanoid = character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then return end
+
+    local nearestPlayer, nearestDistance = nil, math.huge
+    for _, player in ipairs(game.Players:GetPlayers()) do
+        if player ~= Config.Player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local distance = (player.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
+            if distance < nearestDistance then
+                nearestPlayer = player
+                nearestDistance = distance
+            end
+        end
+    end
+
+    if nearestPlayer then
+        humanoid:MoveTo(nearestPlayer.Character.HumanoidRootPart.Position)
+    else
+        humanoid:MoveTo(Vector3.new(0, 0, 0))
     end
 end
 
